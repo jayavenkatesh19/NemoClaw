@@ -24,11 +24,10 @@ jobs:
       - name: Check open PR count for author
         env:
           GH_TOKEN: ${{ github.token }}
+          AUTHOR: ${{ github.event.pull_request.user.login }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          REPO: ${{ github.repository }}
         run: |
-          AUTHOR="${{ github.event.pull_request.user.login }}"
-          PR_NUMBER="${{ github.event.pull_request.number }}"
-          REPO="${{ github.repository }}"
-
           OPEN_COUNT=$(gh pr list --repo "$REPO" --author "$AUTHOR" --state open --json number --jq 'length')
 
           echo "Author $AUTHOR has $OPEN_COUNT open PR(s)"
