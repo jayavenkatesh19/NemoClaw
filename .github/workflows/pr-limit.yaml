@@ -3,8 +3,13 @@
 
 name: pr-limit
 
+# pull_request_target runs in the base repo context, giving the token write
+# access even for fork PRs. This is safe here because this workflow never
+# checks out or executes code from the PR — it only counts open PRs and
+# closes excess ones. Do NOT add a checkout step or run PR-sourced code
+# in this workflow to prevent injection attacks.
 on:
-  pull_request:
+  pull_request_target:
     types: [opened, reopened]
 
 permissions:
