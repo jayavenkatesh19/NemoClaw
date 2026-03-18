@@ -3,7 +3,7 @@ FROM ubuntu:24.04
 ENV DEBIAN_FRONTEND=noninteractive
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
-        curl git ca-certificates bash python3 sudo jq openssh-client \
+        curl git ca-certificates bash python3 sudo jq openssh-client gnupg \
     && rm -rf /var/lib/apt/lists/*
 
 # Install Docker CLI only (NOT Docker daemon — will use host socket at runtime)
