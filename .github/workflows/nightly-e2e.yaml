@@ -1,0 +1,41 @@
+# SPDX-FileCopyrightText: Copyright (c) 2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+#
+# Nightly full E2E: install → onboard → live inference against NVIDIA Cloud API.
+# Requires NVIDIA_API_KEY repository secret.
+# Only runs on schedule and manual dispatch — never on PRs (secret protection).
+
+name: nightly-e2e
+
+on:
+  schedule:
+    - cron: "0 0 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: nightly-e2e
+  cancel-in-progress: true
+
+jobs:
+  full-e2e:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Build full E2E image
+        run: docker build -f test/e2e/Dockerfile.full-e2e -t nemoclaw-full-e2e .
+
+      - name: Run full E2E test
+        env:
+          NVIDIA_API_KEY: ${{ secrets.NVIDIA_API_KEY }}
+        run: |
+          docker run --rm \
+            -v /var/run/docker.sock:/var/run/docker.sock \
+            --group-add $(stat -c '%g' /var/run/docker.sock) \
+            -e NVIDIA_API_KEY \
+            nemoclaw-full-e2e

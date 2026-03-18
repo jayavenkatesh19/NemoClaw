@@ -3,7 +3,7 @@ FROM ubuntu:24.04
 ENV DEBIAN_FRONTEND=noninteractive
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
-        curl git ca-certificates bash python3 sudo jq \
+        curl git ca-certificates bash python3 sudo jq openssh-client \
     && rm -rf /var/lib/apt/lists/*
 
 # Install Docker CLI only (NOT Docker daemon — will use host socket at runtime)
@@ -13,6 +13,18 @@ RUN curl -fsSL https://download.docker.com/linux/ubuntu/gpg | gpg --dearmor -o /
     > /etc/apt/sources.list.d/docker.list && \
     apt-get update && apt-get install -y --no-install-recommends docker-ce-cli && \
     rm -rf /var/lib/apt/lists/*
+
+# Install Node.js 22 (required for npm install + npm link in the test)
+RUN curl -fsSL https://deb.nodesource.com/setup_22.x | bash - \
+    && apt-get install -y --no-install-recommends nodejs \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install openshell CLI (test checks for it in Phase 1)
+RUN curl -fsSL https://github.com/NVIDIA/OpenShell/releases/latest/download/openshell-x86_64-unknown-linux-musl.tar.gz \
+      -o /tmp/openshell.tar.gz \
+    && tar xzf /tmp/openshell.tar.gz -C /tmp \
+    && install -m 755 /tmp/openshell /usr/local/bin/openshell \
+    && rm -f /tmp/openshell.tar.gz /tmp/openshell
 
 # Create non-root testuser with sudo and docker group
 RUN groupadd -f docker && \
