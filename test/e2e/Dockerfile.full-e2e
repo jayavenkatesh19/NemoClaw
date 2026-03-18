@@ -36,6 +36,12 @@ COPY . /workspace
 RUN chown -R testuser:testuser /workspace
 
 USER testuser
+
+# Set npm global prefix to a user-writable directory so npm link works without sudo
+RUN mkdir -p /home/testuser/.npm-global \
+    && npm config set prefix /home/testuser/.npm-global
+ENV PATH="/home/testuser/.npm-global/bin:$PATH"
+
 WORKDIR /workspace
 
 ENTRYPOINT ["bash", "test/e2e/test-full-e2e.sh"]
