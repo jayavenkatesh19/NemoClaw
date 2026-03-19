@@ -119,8 +119,17 @@ info "This installs Node.js, openshell, NemoClaw, and runs onboard."
 info "Expected duration: 5-10 minutes on first run."
 
 INSTALL_LOG="/tmp/nemoclaw-e2e-install.log"
-bash install.sh --non-interactive 2>&1 | tee "$INSTALL_LOG"
-install_exit=${PIPESTATUS[0]}
+# Write to a file instead of piping through tee. openshell's background
+# port-forward inherits pipe file descriptors, which prevents tee from exiting.
+# Use tail -f in the background for real-time output in CI logs.
+bash install.sh --non-interactive > "$INSTALL_LOG" 2>&1 &
+install_pid=$!
+tail -f "$INSTALL_LOG" --pid=$install_pid 2>/dev/null &
+tail_pid=$!
+wait $install_pid
+install_exit=$?
+kill $tail_pid 2>/dev/null || true
+wait $tail_pid 2>/dev/null || true
 
 # Source shell profile to pick up nvm/PATH changes from install.sh
 if [ -f "$HOME/.bashrc" ]; then
