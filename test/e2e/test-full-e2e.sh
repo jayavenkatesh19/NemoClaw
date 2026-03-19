@@ -269,66 +269,17 @@ else
 fi
 
 # ══════════════════════════════════════════════════════════════════
-# Phase 5: Policy enforcement and CLI operations
+# Phase 5: NemoClaw CLI operations
 # ══════════════════════════════════════════════════════════════════
-section "Phase 5: Policy enforcement and CLI operations"
+section "Phase 5: NemoClaw CLI operations"
 
-# ── Test 5a: Policy enforcement (blocked traffic) ──
-info "Testing that sandbox blocks unapproved hosts..."
-ssh_config_block="$(mktemp)"
-if openshell sandbox ssh-config "$SANDBOX_NAME" > "$ssh_config_block" 2>/dev/null; then
-  # Use example.com — a real domain that resolves (93.184.215.14) but is NOT
-  # on the sandbox allow-list. The proxy should block it.
-  # Do NOT use a non-existent domain — DNS failure would give a false positive.
-  TIMEOUT_CMD=""
-  command -v timeout > /dev/null 2>&1 && TIMEOUT_CMD="timeout 30"
-  command -v gtimeout > /dev/null 2>&1 && TIMEOUT_CMD="gtimeout 30"
-  blocked_response=$($TIMEOUT_CMD ssh -F "$ssh_config_block" \
-    -o StrictHostKeyChecking=no \
-    -o UserKnownHostsFile=/dev/null \
-    -o ConnectTimeout=10 \
-    -o LogLevel=ERROR \
-    "openshell-${SANDBOX_NAME}" \
-    "curl -s --max-time 10 -o /dev/null -w '%{http_code}' https://example.com 2>&1 || echo BLOCKED" \
-  2>&1) || true
+# Note: Policy enforcement (proxy blocking, L4/L7 rules, SSRF protection)
+# and sandbox command execution are tested extensively in OpenShell's own
+# E2E suite (e2e/python/test_sandbox_policy.py, test_sandbox_api.py).
+# NemoClaw tests only that its onboard correctly *configured* the policies
+# (Phase 3d above), not that OpenShell *enforces* them.
 
-  # A successful block should show proxy denial (HTTP 403/407/502) or connection refused.
-  # HTTP 200 means the policy did NOT block it — that's a failure.
-  if echo "$blocked_response" | grep -qi "200"; then
-    fail "Policy enforcement: example.com returned 200 — policy did not block unapproved host"
-  elif [ -n "$blocked_response" ]; then
-    pass "Policy enforcement: unapproved host blocked (response: ${blocked_response:0:100})"
-  else
-    fail "Policy enforcement: empty response — could not determine if blocked"
-  fi
-else
-  fail "Could not get SSH config for policy enforcement test"
-fi
-rm -f "$ssh_config_block"
-
-# ── Test 5b: Sandbox command execution ──
-# Neither nemoclaw connect nor openshell sandbox connect supports -- <command>.
-# Use SSH directly (same approach as the inference tests above).
-info "Testing sandbox command execution via SSH..."
-ssh_config_exec="$(mktemp)"
-if openshell sandbox ssh-config "$SANDBOX_NAME" > "$ssh_config_exec" 2>/dev/null; then
-  connect_output=$($TIMEOUT_CMD ssh -F "$ssh_config_exec" \
-    -o StrictHostKeyChecking=no \
-    -o UserKnownHostsFile=/dev/null \
-    -o ConnectTimeout=10 \
-    -o LogLevel=ERROR \
-    "openshell-${SANDBOX_NAME}" \
-    "echo CONNECT_OK" \
-  2>&1) || true
-  echo "$connect_output" | grep -q "CONNECT_OK" \
-    && pass "Sandbox command execution: echo returned CONNECT_OK" \
-    || fail "Sandbox command execution: expected CONNECT_OK, got: ${connect_output:0:200}"
-else
-  fail "Could not get SSH config for command execution test"
-fi
-rm -f "$ssh_config_exec"
-
-# ── Test 5c: nemoclaw logs ──
+# ── Test 5a: nemoclaw logs ──
 info "Testing sandbox log retrieval..."
 logs_output=$(nemoclaw "$SANDBOX_NAME" logs 2>&1) || true
 if [ -n "$logs_output" ]; then
