@@ -112,7 +112,7 @@ fi
 # ══════════════════════════════════════════════════════════════════
 section "Phase 2: Install nemoclaw (non-interactive mode)"
 
-cd "$REPO"
+cd "$REPO" || { fail "Could not cd to repo root: $REPO"; exit 1; }
 
 info "Running install.sh --non-interactive..."
 info "This installs Node.js, openshell, NemoClaw, and runs onboard."
@@ -183,9 +183,11 @@ echo "$list_output" | grep -q "$SANDBOX_NAME" \
 
 # 3b: nemoclaw status
 status_output=$(nemoclaw "$SANDBOX_NAME" status 2>&1)
-[ $? -eq 0 ] \
-  && pass "nemoclaw ${SANDBOX_NAME} status exits 0" \
-  || fail "nemoclaw ${SANDBOX_NAME} status failed"
+if [ $? -eq 0 ]; then
+  pass "nemoclaw ${SANDBOX_NAME} status exits 0"
+else
+  fail "nemoclaw ${SANDBOX_NAME} status failed: ${status_output:0:200}"
+fi
 
 # 3c: Inference must be configured by onboard (no fallback — if onboard
 # failed to configure it, that's a bug we want to catch)
