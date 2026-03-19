@@ -176,10 +176,13 @@ nemoclaw --help > /dev/null 2>&1 \
 section "Phase 3: Sandbox verification"
 
 # 3a: nemoclaw list
-list_output=$(nemoclaw list 2>&1)
-echo "$list_output" | grep -q "$SANDBOX_NAME" \
-  && pass "nemoclaw list contains '${SANDBOX_NAME}'" \
-  || fail "nemoclaw list does not contain '${SANDBOX_NAME}'"
+if list_output=$(nemoclaw list 2>&1); then
+  echo "$list_output" | grep -Fq -- "$SANDBOX_NAME" \
+    && pass "nemoclaw list contains '${SANDBOX_NAME}'" \
+    || fail "nemoclaw list does not contain '${SANDBOX_NAME}'"
+else
+  fail "nemoclaw list failed: ${list_output:0:200}"
+fi
 
 # 3b: nemoclaw status
 status_output=$(nemoclaw "$SANDBOX_NAME" status 2>&1)
@@ -191,21 +194,27 @@ fi
 
 # 3c: Inference must be configured by onboard (no fallback — if onboard
 # failed to configure it, that's a bug we want to catch)
-inf_check=$(openshell inference get 2>&1)
-echo "$inf_check" | grep -qi "nvidia-nim" \
-  && pass "Inference configured via onboard" \
-  || fail "Inference not configured — onboard did not set up nvidia-nim provider"
+if inf_check=$(openshell inference get 2>&1); then
+  echo "$inf_check" | grep -qi "nvidia-nim" \
+    && pass "Inference configured via onboard" \
+    || fail "Inference not configured — onboard did not set up nvidia-nim provider"
+else
+  fail "openshell inference get failed: ${inf_check:0:200}"
+fi
 
 # 3d: Policy presets applied
-policy_output=$(openshell policy get --full "$SANDBOX_NAME" 2>&1)
-echo "$policy_output" | grep -qi "network_policies" \
-  && pass "Policy applied to sandbox" \
-  || fail "No network policy found on sandbox"
+if policy_output=$(openshell policy get --full "$SANDBOX_NAME" 2>&1); then
+  echo "$policy_output" | grep -qi "network_policies" \
+    && pass "Policy applied to sandbox" \
+    || fail "No network policy found on sandbox"
 
-# Check that at least npm or pypi preset endpoints are present (onboard auto-suggests these)
-echo "$policy_output" | grep -qi "registry.npmjs.org\|pypi.org" \
-  && pass "Policy presets (npm/pypi) detected in sandbox policy" \
-  || skip "Could not confirm npm/pypi presets in policy (may vary by environment)"
+  # Check that at least npm or pypi preset endpoints are present (onboard auto-suggests these)
+  echo "$policy_output" | grep -qi "registry.npmjs.org\|pypi.org" \
+    && pass "Policy presets (npm/pypi) detected in sandbox policy" \
+    || skip "Could not confirm npm/pypi presets in policy (may vary by environment)"
+else
+  fail "openshell policy get failed: ${policy_output:0:200}"
+fi
 
 # ══════════════════════════════════════════════════════════════════
 # Phase 4: Live inference — the real proof
@@ -299,7 +308,7 @@ nemoclaw "$SANDBOX_NAME" destroy 2>&1 | tail -3 || true
 openshell gateway destroy -g nemoclaw 2>/dev/null || true
 
 list_after=$(nemoclaw list 2>&1)
-echo "$list_after" | grep -q "$SANDBOX_NAME" \
+echo "$list_after" | grep -Fq -- "$SANDBOX_NAME" \
   && fail "Sandbox ${SANDBOX_NAME} still in list after destroy" \
   || pass "Sandbox ${SANDBOX_NAME} removed"
 
