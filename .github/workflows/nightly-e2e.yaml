@@ -36,6 +36,7 @@ jobs:
           NEMOCLAW_NON_INTERACTIVE: "1"
           NEMOCLAW_SANDBOX_NAME: "e2e-nightly"
           NEMOCLAW_RECREATE_SANDBOX: "1"
+          GITHUB_TOKEN: ${{ github.token }}
         run: bash test/e2e/test-full-e2e.sh
 
       - name: Upload install log on failure
